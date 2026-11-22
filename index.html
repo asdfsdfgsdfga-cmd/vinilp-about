@@ -29,7 +29,7 @@
     height: 64px; display: flex; align-items: center; justify-content: center;
     position: relative; flex: 0 0 auto;
   }
-  .topbar h1 { font-size: 22px; font-weight: 700; letter-spacing: .2px; }
+  .topbar h1 { font-size: 22px; font-weight: 400; letter-spacing: .2px; }
   .topbar .side { position: absolute; top: 0; bottom: 0; width: 64px; display: flex; align-items: center; justify-content: center; }
   .topbar .side.left { left: 0; }
   .topbar .side.right { right: 0; }
@@ -70,13 +70,13 @@
   .news-card:active { transform: scale(.985); opacity: .92; }
   .news-card .strip { height: 20px; background: #000; }
   .news-card .body { display: flex; gap: 14px; padding: 14px 16px 18px; align-items: flex-start; }
-  .news-card .thumb { width: 108px; height: 108px; border-radius: 8px; flex: 0 0 108px; overflow: hidden; background: #222; }
+  .news-card .thumb { width: 108px; aspect-ratio: 4 / 3; border-radius: 0; flex: 0 0 108px; overflow: hidden; background: #222; }
   .news-card .thumb svg { width: 100%; height: 100%; display: block; }
-  .news-card .title { font-size: 17.5px; font-weight: 700; line-height: 1.38; color: #111; }
+  .news-card .title { font-size: 17.5px; font-weight: 400; line-height: 1.38; color: #111; }
 
   /* ===== Detail 详情 ===== */
   .detail-body { background: #fff; flex: 1; padding: 22px 22px 40px; border-top-left-radius: 0; border-top-right-radius: 0; }
-  .detail-body h2 { font-size: 27px; font-weight: 700; line-height: 1.32; margin-bottom: 22px; }
+  .detail-body h2 { font-size: 27px; font-weight: 400; line-height: 1.32; margin-bottom: 22px; }
   .detail-hero { width: 100%; border-radius: 10px; overflow: hidden; margin-bottom: 24px; background: #111; }
   .detail-hero svg { width: 100%; height: auto; display: block; }
   .detail-body p { font-size: 17.5px; line-height: 1.72; color: #111; }
@@ -155,8 +155,9 @@
   <section class="view" id="view-detail">
     <header class="topbar">
       <span class="side left" id="back-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#4a90e2" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 5 8 12 15 19"></polyline>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#4a90e2" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="10 6 4 12 10 18"></polyline>
         </svg>
       </span>
       <h1>Detail</h1>
@@ -171,16 +172,16 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path>
           <polyline points="15 3 15 8 19 8"></polyline>
-          <path d="M8.5 17l1.6-3.4 1.6 3.4 1.7-3.2" fill="none"></path>
+          <polygon points="12,11.1 12.82,13.37 15.23,13.45 13.33,14.93 13.99,17.25 12,15.9 10.01,17.25 10.67,14.93 8.77,13.45 11.18,13.37"></polygon>
         </svg>
       </span>
       <h1>Market Cap</h1>
       <span class="side right">
         <svg viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" stroke-width="1.8">
           <circle cx="12" cy="12" r="9"></circle>
-          <circle cx="8" cy="12" r="1.4" fill="#5a5a5a"></circle>
-          <circle cx="12" cy="12" r="1.4" fill="#5a5a5a"></circle>
-          <circle cx="16" cy="12" r="1.4" fill="#5a5a5a"></circle>
+          <circle cx="8" cy="12" r="1.6" fill="#5a5a5a"></circle>
+          <circle cx="12" cy="12" r="1.6" fill="#5a5a5a"></circle>
+          <circle cx="16" cy="12" r="1.6" fill="#5a5a5a"></circle>
         </svg>
       </span>
     </header>
